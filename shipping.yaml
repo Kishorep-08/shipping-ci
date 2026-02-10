@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shipping
+  namespace: roboshop
+data:
+  CART_ENDPOINT: "cart:8080"
+  DB_HOST: mysql
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shipping
+  namespace: roboshop
+  labels:
+    project: roboshop
+    environment: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      project: roboshop
+      environment: dev
+      component: shipping
+  template:
+    metadata:
+      labels:
+        project: roboshop
+        environment: dev
+        component: shipping
+    spec:
+      containers:
+      - name: shipping
+        image: kishore8856/shipping:v2
+        imagePullPolicy: Always
+        envFrom:
+          - configMapRef:
+              name: shipping
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 25
+          periodSeconds: 5                
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 40
+          periodSeconds: 5
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: shipping
+  namespace: roboshop
+spec:
+  selector:
+    project: roboshop
+    environment: dev
+    component: shipping
+  ports:
+    - protocol: TCP
+      port: 8080    # port on which service is exposed
+      targetPort: 8080   # port on which shipping container is listening
